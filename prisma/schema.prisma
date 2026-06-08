@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  password              String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  tattooProfile         TattooProfile?
+  subscription          Subscription?
+  photos                Photo[]
+
+  @@map("users")
+}
+
+model TattooProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name                  String
+  bio                   String?  @db.Text
+  slug                  String   @unique
+
+  locationProvince      String
+  locationCanton        String?
+
+  phone                 String?
+  whatsapp              String?
+  instagram             String?
+  
+  basePrice             Int?
+
+  themeColor            String   @default("#667eea")
+  
+  isActive              Boolean  @default(false)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  photos                Photo[]
+  pageViews             PageView[]
+  contactClicks         ContactClick[]
+
+  @@map("tattoo_profiles")
+  @@index([locationProvince])
+  @@index([isActive])
+}
+
+model Photo {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  tattooProfileId       String
+  tattooProfile         TattooProfile @relation(fields: [tattooProfileId], references: [id], onDelete: Cascade)
+
+  imageUrl              String
+  publicId              String
+
+  order                 Int      @default(0)
+
+  createdAt             DateTime @default(now())
+
+  @@map("photos")
+  @@index([tattooProfileId])
+  @@index([userId])
+}
+
+model Subscription {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeSubscriptionId  String?  @unique
+  stripeCustomerId      String?
+
+  status                String   @default("active")
+  
+  currentPrice          Int
+
+  startedAt             DateTime @default(now())
+  renewsAt              DateTime?
+  canceledAt            DateTime?
+  trialEndsAt           DateTime?
+
+  payments              Payment[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("subscriptions")
+  @@index([userId])
+  @@index([status])
+}
+
+model AuditLog {
+  id                    String   @id @default(cuid())
+  userId                String?
+
+  action                String
+  description           String?  @db.Text
+  ipAddress             String?
+  userAgent             String?
+
+  createdAt             DateTime @default(now())
+
+  @@map("audit_logs")
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Payment {
+  id                    String   @id @default(cuid())
+  subscriptionId        String
+  subscription          Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  stripePaymentId       String   @unique
+  
+  amount                Int
+  currency              String   @default("CRC")
+
+  status                String
+
+  description           String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("payments")
+  @@index([subscriptionId])
+  @@index([status])
+}
+
+model PageView {
+  id                    String   @id @default(cuid())
+  tattooProfileId       String
+  tattooProfile         TattooProfile @relation(fields: [tattooProfileId], references: [id], onDelete: Cascade)
+
+  ipAddress             String?
+  userAgent             String?
+  referer               String?
+
+  createdAt             DateTime @default(now())
+
+  @@map("page_views")
+  @@index([tattooProfileId])
+  @@index([createdAt])
+}
+
+model ContactClick {
+  id                    String   @id @default(cuid())
+  tattooProfileId       String
+  tattooProfile         TattooProfile @relation(fields: [tattooProfileId], references: [id], onDelete: Cascade)
+
+  contactMethod         String
+  ipAddress             String?
+  userAgent             String?
+
+  createdAt             DateTime @default(now())
+
+  @@map("contact_clicks")
+  @@index([tattooProfileId])
+  @@index([createdAt])
+}
